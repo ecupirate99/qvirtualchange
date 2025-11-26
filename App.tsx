@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Shirt, User, Images, Menu, X } from 'lucide-react';
+import { Sparkles, Shirt, User, Images, Menu, X, Type, Image as ImageIcon } from 'lucide-react';
 import UploadZone from './components/UploadZone';
 import Button from './components/Button';
 import ComparisonSlider from './components/ComparisonSlider';
@@ -9,11 +9,14 @@ import HeroGraphic from './components/HeroGraphic';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
 import ThemeToggle from './components/ThemeToggle';
+import CameraCapture from './components/CameraCapture';
+import ClothingPromptInput from './components/ClothingPromptInput';
 import { FileData, AppState, GalleryItem, StyleSuggestion } from './types';
 import { generateTryOn, getStyleSuggestions, generateClothingPreview } from './services/gemini';
 
 type View = 'HOME' | 'PRIVACY' | 'TERMS';
 type Theme = 'light' | 'dark';
+type InputMode = 'UPLOAD' | 'TEXT';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('HOME');
@@ -25,6 +28,11 @@ const App: React.FC = () => {
   const [theme, setTheme] = useState<Theme>('dark');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
+  // New Features State
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraTarget, setCameraTarget] = useState<'person' | 'clothing'>('person');
+  const [clothingInputMode, setClothingInputMode] = useState<InputMode>('UPLOAD');
+
   // Gallery State
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -90,7 +98,6 @@ const App: React.FC = () => {
         localStorage.setItem('lumina_gallery', JSON.stringify(updated));
       } catch (e) {
         console.error("Storage quota exceeded", e);
-        // Fallback: don't save to LS if full, but update state
       }
       return updated;
     });
@@ -119,6 +126,8 @@ const App: React.FC = () => {
 
   const handleSelectSuggestion = async (suggestion: StyleSuggestion) => {
     setGeneratingClothing(true);
+    // Switch to upload mode so we can show the result
+    setClothingInputMode('UPLOAD'); 
     try {
         const clothingFile = await generateClothingPreview(suggestion);
         setClothingImage(clothingFile);
@@ -139,8 +148,6 @@ const App: React.FC = () => {
       const resultUrl = await generateTryOn(personImage, clothingImage);
       setGeneratedImage(resultUrl);
       setAppState(AppState.SUCCESS);
-      
-      // Auto-save to gallery
       saveToGallery(resultUrl, personImage.previewUrl);
     } catch (err: any) {
       console.error(err);
@@ -159,11 +166,25 @@ const App: React.FC = () => {
     setCurrentView('HOME');
   };
 
+  const openCamera = (target: 'person' | 'clothing') => {
+    setCameraTarget(target);
+    setShowCamera(true);
+  };
+
+  const handleCameraCapture = (file: FileData) => {
+    if (cameraTarget === 'person') {
+      setPersonImage(file);
+      setSuggestions([]);
+    } else {
+      setClothingImage(file);
+      setClothingInputMode('UPLOAD');
+    }
+  };
+
   const renderContent = () => {
     if (currentView === 'PRIVACY') return <PrivacyPolicy />;
     if (currentView === 'TERMS') return <TermsOfService />;
 
-    // HOME View Logic
     if (appState === AppState.SUCCESS && generatedImage && personImage) {
       return (
         <ComparisonSlider 
@@ -180,8 +201,6 @@ const App: React.FC = () => {
         {/* Left Side: Header & Info */}
         <div className="w-full lg:w-1/3 space-y-6 lg:space-y-8 lg:sticky lg:top-32">
           <div className="space-y-4 text-center lg:text-left">
-            
-            {/* Animated Graphic (Centered on mobile) */}
             <div className="flex justify-center lg:justify-start">
                <HeroGraphic />
             </div>
@@ -190,7 +209,7 @@ const App: React.FC = () => {
               Wear it <br className="hidden md:block"/> before you <br className="hidden md:block"/> buy it.
             </h1>
             <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-md mx-auto lg:mx-0">
-              Experience the future of fashion with Quintin's AI-powered virtual dressing room. Upload a photo, pick a style, and see the transformation instantly.
+              Experience the future of fashion. Upload a photo, snap a pic, or describe a style to see the transformation instantly.
             </p>
           </div>
           
@@ -216,6 +235,8 @@ const App: React.FC = () => {
         {/* Right Side: Inputs */}
         <div className="w-full lg:w-1/2 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+            
+            {/* Step 1: Person */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-accent-600 dark:text-accent-400">
                   <User size={18} />
@@ -229,20 +250,56 @@ const App: React.FC = () => {
                   setPersonImage(file);
                   if(file) setSuggestions([]);
                 }}
+                onCameraClick={() => openCamera('person')}
               />
             </div>
             
+            {/* Step 2: Clothing */}
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-accent-600 dark:text-accent-400">
-                  <Shirt size={18} />
-                  <span className="text-xs font-bold uppercase tracking-widest">Step 2</span>
+              <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-accent-600 dark:text-accent-400">
+                      <Shirt size={18} />
+                      <span className="text-xs font-bold uppercase tracking-widest">Step 2</span>
+                  </div>
+                  
+                  {/* Toggle Input Mode */}
+                  <div className="flex bg-gray-200 dark:bg-gray-800 rounded-lg p-0.5">
+                      <button 
+                        onClick={() => setClothingInputMode('UPLOAD')}
+                        className={`p-1.5 rounded-md transition-all ${clothingInputMode === 'UPLOAD' ? 'bg-white dark:bg-gray-700 shadow text-accent-600 dark:text-accent-400' : 'text-gray-500'}`}
+                        title="Upload Image"
+                      >
+                         <ImageIcon size={14} />
+                      </button>
+                      <button 
+                        onClick={() => setClothingInputMode('TEXT')}
+                        className={`p-1.5 rounded-md transition-all ${clothingInputMode === 'TEXT' ? 'bg-white dark:bg-gray-700 shadow text-accent-600 dark:text-accent-400' : 'text-gray-500'}`}
+                        title="Describe with Text"
+                      >
+                         <Type size={14} />
+                      </button>
+                  </div>
               </div>
-              <UploadZone 
-                id="cloth-upload"
-                label="Upload Clothing"
-                fileData={clothingImage}
-                onFileSelect={setClothingImage}
-              />
+
+              {clothingInputMode === 'UPLOAD' ? (
+                <UploadZone 
+                    id="cloth-upload"
+                    label="Upload Clothing"
+                    fileData={clothingImage}
+                    onFileSelect={setClothingImage}
+                    onCameraClick={() => openCamera('clothing')}
+                />
+              ) : (
+                <div className="h-64 sm:h-80">
+                   <ClothingPromptInput 
+                      onImageGenerated={(file) => {
+                          setClothingImage(file);
+                          setClothingInputMode('UPLOAD'); // Switch back to show result
+                      }}
+                      onCancel={() => setClothingInputMode('UPLOAD')}
+                   />
+                </div>
+              )}
             </div>
           </div>
 
@@ -260,9 +317,7 @@ const App: React.FC = () => {
 
           <div className="pt-4 flex flex-col items-center">
              <div className="w-full relative group">
-                {/* Decorative elements around button (Dark mode only) */}
                 <div className="hidden dark:block absolute -inset-1 bg-gradient-to-r from-accent-600 to-purple-600 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-                
                 <Button 
                   onClick={handleGenerate}
                   isLoading={appState === AppState.GENERATING}
@@ -278,11 +333,10 @@ const App: React.FC = () => {
              </p>
           </div>
           
-          {/* Visualizer scanning animation overlay if generating */}
+          {/* Loading Overlay */}
           {appState === AppState.GENERATING && (
              <div className="fixed inset-0 z-[60] bg-white/80 dark:bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center">
                 <div className="relative w-64 h-64 md:w-96 md:h-96 rounded-2xl overflow-hidden border border-accent-500/30 shadow-[0_0_50px_rgba(14,165,233,0.3)]">
-                    {/* Background Image Ghosting */}
                     {personImage && (
                         <img 
                           src={personImage.previewUrl} 
@@ -290,17 +344,13 @@ const App: React.FC = () => {
                           alt="processing" 
                         />
                     )}
-                    {/* Scanning Line */}
                     <div className="absolute top-0 left-0 w-full h-2 bg-accent-500 shadow-[0_0_20px_#0ea5e9] animate-scan z-10"></div>
-                    
-                    {/* Overlay Grid */}
                     <div className="absolute inset-0 bg-[linear-gradient(rgba(14,165,233,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(14,165,233,0.1)_1px,transparent_1px)] bg-[size:20px_20px] z-0"></div>
                 </div>
                 <h2 className="mt-8 text-2xl font-display font-bold text-gray-900 dark:text-white animate-pulse">Designing your look...</h2>
                 <p className="text-accent-600 dark:text-accent-400 mt-2">AI is analyzing fit and fabric physics</p>
              </div>
           )}
-
         </div>
       </div>
     );
@@ -308,11 +358,18 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#09090b] text-gray-900 dark:text-gray-100 font-sans selection:bg-accent-500/30 transition-colors duration-500">
+      {/* Camera Modal */}
+      {showCamera && (
+        <CameraCapture 
+          onCapture={handleCameraCapture} 
+          onClose={() => setShowCamera(false)}
+          defaultFacingMode={cameraTarget === 'person' ? 'user' : 'environment'}
+        />
+      )}
+
       {/* Navbar */}
       <nav className="border-b border-gray-200 dark:border-gray-800 bg-white/70 dark:bg-black/20 backdrop-blur-lg fixed top-0 w-full z-50 transition-colors duration-500">
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
-          
-          {/* Logo Section */}
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setCurrentView('HOME')}>
             <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-tr from-accent-600 to-accent-400 flex items-center justify-center shadow-lg shadow-accent-500/20">
               <Sparkles className="text-white w-5 h-5 md:w-6 md:h-6" />
@@ -322,7 +379,6 @@ const App: React.FC = () => {
             </span>
           </div>
 
-          {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-6 text-sm">
             <button 
               onClick={() => setIsGalleryOpen(true)}
@@ -336,13 +392,10 @@ const App: React.FC = () => {
                 </span>
               )}
             </button>
-            
             <div className="h-4 w-px bg-gray-300 dark:bg-gray-800"></div>
-            
             <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
           </div>
 
-          {/* Mobile Menu Button */}
           <div className="flex md:hidden items-center gap-2">
             <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
             <button 
@@ -354,7 +407,6 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Menu Dropdown */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4 space-y-4 animate-in slide-in-from-top-4">
              <button 
@@ -386,14 +438,12 @@ const App: React.FC = () => {
         onDelete={removeFromGallery}
       />
 
-      {/* Main Content */}
       <main className="pt-24 md:pt-32 pb-20 px-4 md:px-6">
         <div className="max-w-7xl mx-auto">
           {renderContent()}
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-gray-200 dark:border-gray-800 bg-white/40 dark:bg-black/40 py-8 md:py-12 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
           <p className="text-gray-500 text-sm">© {new Date().getFullYear()} Quintin's Virtual Dressing Room. All rights reserved.</p>

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, Camera } from 'lucide-react';
 import { FileData } from '../types';
 import { processFile } from '../utils';
 
@@ -7,16 +7,20 @@ interface UploadZoneProps {
   label: string;
   fileData: FileData | null;
   onFileSelect: (data: FileData | null) => void;
+  onCameraClick?: () => void;
   accept?: string;
   id: string;
+  compact?: boolean;
 }
 
 const UploadZone: React.FC<UploadZoneProps> = ({ 
   label, 
   fileData, 
   onFileSelect, 
+  onCameraClick,
   accept = "image/*",
-  id
+  id,
+  compact = false
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -54,6 +58,11 @@ const UploadZone: React.FC<UploadZoneProps> = ({
     if (inputRef.current) inputRef.current.value = '';
   };
 
+  const handleCameraBtn = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onCameraClick) onCameraClick();
+  };
+
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-2">
@@ -68,7 +77,8 @@ const UploadZone: React.FC<UploadZoneProps> = ({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`
-          relative group cursor-pointer overflow-hidden rounded-xl border-2 border-dashed transition-all duration-300 h-64 sm:h-80 flex flex-col items-center justify-center
+          relative group cursor-pointer overflow-hidden rounded-xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center
+          ${compact ? 'h-40' : 'h-64 sm:h-80'}
           ${isDragging 
             ? 'border-accent-500 bg-accent-50 dark:bg-accent-500/10 scale-[1.02]' 
             : 'border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 bg-gray-100 dark:bg-gray-900/50'
@@ -105,18 +115,37 @@ const UploadZone: React.FC<UploadZoneProps> = ({
             </div>
           </>
         ) : (
-          <div className="text-center space-y-4">
-            <div className={`p-4 rounded-full transition-colors ${
-              isDragging 
-                ? 'bg-accent-100 text-accent-600 dark:bg-gray-800 dark:text-accent-400' 
-                : 'bg-white text-gray-400 shadow-sm dark:bg-gray-800 dark:text-gray-400 dark:shadow-none'
-              }`}
-            >
-              <Upload size={32} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Click to upload or drag & drop</p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">PNG, JPG, WEBP up to 10MB</p>
+          <div className="text-center w-full">
+            <div className="flex flex-col items-center justify-center space-y-4">
+               {/* Upload Icon */}
+               <div className={`p-3 rounded-full transition-colors ${
+                  isDragging 
+                    ? 'bg-accent-100 text-accent-600 dark:bg-gray-800 dark:text-accent-400' 
+                    : 'bg-white text-gray-400 shadow-sm dark:bg-gray-800 dark:text-gray-400 dark:shadow-none'
+                }`}>
+                  <Upload size={compact ? 24 : 32} />
+               </div>
+               
+               <div>
+                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Tap to upload</p>
+                 {!compact && <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">or drag & drop</p>}
+               </div>
+
+               {/* Divider */}
+               <div className="flex items-center w-full max-w-[120px] gap-2">
+                 <div className="h-px bg-gray-300 dark:bg-gray-700 flex-1"></div>
+                 <span className="text-[10px] uppercase text-gray-400">or</span>
+                 <div className="h-px bg-gray-300 dark:bg-gray-700 flex-1"></div>
+               </div>
+
+               {/* Camera Button */}
+               <button 
+                  onClick={handleCameraBtn}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
+               >
+                  <Camera size={16} />
+                  <span>Use Camera</span>
+               </button>
             </div>
           </div>
         )}

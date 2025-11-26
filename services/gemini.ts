@@ -126,10 +126,13 @@ export const getStyleSuggestions = async (person: FileData): Promise<StyleSugges
 };
 
 export const generateClothingPreview = async (suggestion: StyleSuggestion): Promise<FileData> => {
+  return generateClothingFromPrompt(`${suggestion.color} ${suggestion.title}. ${suggestion.description}`);
+};
+
+export const generateClothingFromPrompt = async (userPrompt: string): Promise<FileData> => {
   const ai = getAiClient();
 
-  const prompt = `Generate a high-quality, professional product photography image of a ${suggestion.color} ${suggestion.title}. 
-  Description: ${suggestion.description}.
+  const prompt = `Generate a high-quality, professional product photography image of the following clothing item: ${userPrompt}.
   View: Front view, flat lay or on a mannequin ghost.
   Background: Pure white or clean neutral background.
   Style: Photorealistic, high detail fashion e-commerce style.`;
@@ -148,10 +151,8 @@ export const generateClothingPreview = async (suggestion: StyleSuggestion): Prom
             const base64 = part.inlineData.data;
             const previewUrl = `data:image/png;base64,${base64}`;
             
-            // Convert to File object structure
-            // Note: We can't easily create a true 'File' object in browser from base64 without conversion, 
-            // but for our internal usage, this mocks it sufficiently.
-            const file = new File([new Blob([''], {type: 'image/png'})], `${suggestion.title}.png`, { type: 'image/png' });
+            // Create a pseudo-file for internal consistency
+            const file = new File([new Blob([''], {type: 'image/png'})], `generated-clothing.png`, { type: 'image/png' });
 
             return {
               file,
