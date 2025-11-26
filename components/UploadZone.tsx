@@ -97,12 +97,17 @@ const UploadZone: React.FC<UploadZoneProps> = ({
 
         {fileData ? (
           <>
+            {/* Background pattern to show transparency/padding nicely */}
+            <div className="absolute inset-0 bg-[linear-gradient(45deg,#80808012_25%,transparent_25%,transparent_75%,#80808012_75%,#80808012),linear-gradient(45deg,#80808012_25%,transparent_25%,transparent_75%,#80808012_75%,#80808012)] bg-[size:20px_20px] bg-[position:0_0,10px_10px] bg-gray-50 dark:bg-gray-900" />
+            
+            {/* Using object-contain to ensure the FULL picture is visible without cropping */}
             <img 
               src={fileData.previewUrl} 
               alt="Preview" 
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+              className="relative z-10 w-full h-full object-contain" 
             />
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            
+            <div className="absolute inset-0 z-20 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <button
                 onClick={handleRemove}
                 className="bg-red-500/80 hover:bg-red-600 text-white p-2 rounded-full backdrop-blur-sm transition-transform hover:scale-110 shadow-lg"
@@ -110,7 +115,7 @@ const UploadZone: React.FC<UploadZoneProps> = ({
                 <X size={20} />
               </button>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute bottom-0 left-0 right-0 z-20 p-3 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                <p className="text-xs text-white truncate text-center">{fileData.file.name}</p>
             </div>
           </>

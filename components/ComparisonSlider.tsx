@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeftRight, Download, RefreshCw, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { ArrowLeftRight, Download, RefreshCw, ZoomIn, ZoomOut, Maximize, Share2 } from 'lucide-react';
 import Button from './Button';
-import { downloadImage } from '../utils';
+import { downloadImage, shareImage } from '../utils';
 
 interface ComparisonSliderProps {
   beforeImage: string;
@@ -58,6 +58,20 @@ const ComparisonSlider: React.FC<ComparisonSliderProps> = ({ beforeImage, afterI
       const newZoom = Math.min(Math.max(prev + delta, 1), 3); // Max 3x zoom, Min 1x
       return Number(newZoom.toFixed(1));
     });
+  };
+
+  const handleShare = async () => {
+    const success = await shareImage(
+      afterImage, 
+      "Quintin's Virtual Dressing Room", 
+      "Check out this virtual try-on I created!"
+    );
+    if (!success) {
+      // Fallback behavior if Web Share API is not available or cancelled
+      // Just a subtle notification or we rely on the button simply not doing anything visible besides console log
+      // In a real app, maybe show a "Copied to clipboard" toast
+      console.log("Share skipped or not supported");
+    }
   };
 
   return (
@@ -182,13 +196,23 @@ const ComparisonSlider: React.FC<ComparisonSliderProps> = ({ beforeImage, afterI
           >
             Try Another
           </Button>
-          <Button 
-            onClick={() => downloadImage(afterImage, 'lumina-tryon-result.png')}
-            icon={<Download size={16} />}
-            className="w-full sm:w-auto"
-          >
-            Save Image
-          </Button>
+          <div className="flex gap-3 w-full sm:w-auto">
+             <Button 
+               variant="outline"
+               onClick={handleShare}
+               icon={<Share2 size={16} />}
+               className="flex-1 sm:flex-initial"
+             >
+               Share
+             </Button>
+             <Button 
+               onClick={() => downloadImage(afterImage, `quintin-vdr-${Date.now()}.png`)}
+               icon={<Download size={16} />}
+               className="flex-1 sm:flex-initial"
+             >
+               Save
+             </Button>
+          </div>
         </div>
       </div>
       
