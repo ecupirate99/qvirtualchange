@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { FileData, StyleSuggestion } from "../types";
 
@@ -5,10 +6,17 @@ const GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
 const GEMINI_TEXT_MODEL = "gemini-2.5-flash";
 
 const getAiClient = () => {
-  if (!process.env.API_KEY) {
-    throw new Error("API Key is missing. Please set the API_KEY environment variable.");
+  // Prefer process.env.API_KEY as per guidelines, but fall back to a global for client-side deployments
+  const apiKey = process.env.API_KEY || (window as any).GEMINI_API_KEY; 
+  if (!apiKey || apiKey === "VDR_API_KEY_PLACEHOLDER") { // Check for the placeholder too
+    throw new Error(
+      "API Key is missing or incorrectly configured. For client-side deployments (like Netlify), " +
+      "please ensure your API key is set as a global variable. If using Netlify, " +
+      "set `GEMINI_API_KEY` in environment variables and configure the build command " +
+      "to replace the placeholder in `index.html`. Refer to documentation for details."
+    );
   }
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  return new GoogleGenAI({ apiKey });
 };
 
 export const generateTryOn = async (
@@ -44,7 +52,7 @@ export const generateTryOn = async (
       3. DO NOT leave the original long sleeves or clothing visible underneath the new garment.
       4. Retain the person's exact facial features, body pose, skin tone, and the background.
       5. Ensure the clothing fits naturally, respecting the body's perspective and lighting.
-      6. Output ONLY the resulting image.`,
+      6. Output ONLY the resulting image.`
     },
   ];
 
