@@ -1,0 +1,5 @@
+{
+  "name": "Lumina VTO",
+  "description": "Next-gen virtual try-on experience powered by Gemini AI. Upload a photo and a garment to instantly visualize the look.",
+  "requestFramePermissions": []
+}
